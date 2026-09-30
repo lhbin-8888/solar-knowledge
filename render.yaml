@@ -1,0 +1,16 @@
+# Render 部署配置：连 GitHub 仓库后自动部署为 Web Service
+# 文档：https://render.com/docs/yaml-spec
+services:
+  - type: web            # Web 服务（监听端口，可公网访问）
+    name: solar-knowledge
+    runtime: python
+    plan: free           # 免费层；不活跃 15 分钟后休眠，首次访问冷启动数秒
+    branch: main         # 监听此分支的 push 自动重新部署
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python server.py"
+    envVars:
+      - key: HOST        # 监听所有网络接口（容器外可访问）
+        value: "0.0.0.0"
+      - key: PYTHON_VERSION
+        value: "3.11"
+    # 健康检查默认请求 GET /，server.py 返回 index.html(200)，天然通过

@@ -1,0 +1,360 @@
+{
+  "categories": [
+    {
+      "id": "sociology",
+      "name": "社会学",
+      "color": "#FF6B6B",
+      "size": 1.25,
+      "orbitRadius": 20.0,
+      "speed": 0.42,
+      "satellites": [
+        {
+          "title": "乡土中国",
+          "author": "费孝通",
+          "summary": "读懂中国传统乡村社会结构与差序格局的奠基之作。",
+          "tags": [
+            "中国社会",
+            "经典",
+            "差序格局"
+          ],
+          "id": "sociology-1",
+          "cover": ""
+        },
+        {
+          "title": "乌合之众",
+          "author": "古斯塔夫·勒庞",
+          "summary": "群体心理经典，解释人为何会在群体中失去理性。",
+          "tags": [
+            "群体心理",
+            "社会",
+            "经典"
+          ],
+          "id": "sociology-2",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "psychology",
+      "name": "心理学",
+      "color": "#4ECDC4",
+      "size": 1.2,
+      "orbitRadius": 24.5,
+      "speed": 0.38,
+      "satellites": [
+        {
+          "title": "思考，快与慢",
+          "author": "丹尼尔·卡尼曼",
+          "summary": "系统1与系统2，揭示人类决策中的认知偏差。",
+          "tags": [
+            "认知偏差",
+            "决策",
+            "经典"
+          ],
+          "id": "psychology-1",
+          "cover": ""
+        },
+        {
+          "title": "被讨厌的勇气",
+          "author": "岸见一郎 / 古贺史健",
+          "summary": "用阿德勒心理学讲「课题分离」与自我接纳。",
+          "tags": [
+            "阿德勒",
+            "自我成长",
+            "心理学"
+          ],
+          "id": "psychology-2",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "history",
+      "name": "历史",
+      "color": "#FFD166",
+      "size": 1.35,
+      "orbitRadius": 29.0,
+      "speed": 0.34,
+      "satellites": [
+        {
+          "title": "万历十五年",
+          "author": "黄仁宇",
+          "summary": "以平淡一年为切口，看大明王朝的制度困局。",
+          "tags": [
+            "明史",
+            "大历史",
+            "经典"
+          ],
+          "id": "history-1",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "biography",
+      "name": "人物传记",
+      "color": "#F78FB3",
+      "size": 1.1,
+      "orbitRadius": 33.5,
+      "speed": 0.31,
+      "satellites": [
+        {
+          "title": "史蒂夫·乔布斯传",
+          "author": "沃尔特·艾萨克森",
+          "summary": "苹果创始人的极致与偏执，一部创新者传记。",
+          "tags": [
+            "科技",
+            "传记",
+            "创新"
+          ],
+          "id": "biography-1",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "philosophy",
+      "name": "哲学与宗教",
+      "color": "#A66CFF",
+      "size": 1.3,
+      "orbitRadius": 38.0,
+      "speed": 0.28,
+      "satellites": [
+        {
+          "title": "沉思录",
+          "author": "马可·奥勒留",
+          "summary": "罗马皇帝写给自己的人生哲学，斯多葛派经典。",
+          "tags": [
+            "斯多葛",
+            "古罗马",
+            "自我"
+          ],
+          "id": "philosophy-1",
+          "cover": ""
+        },
+        {
+          "title": "论语",
+          "author": "孔子及其弟子",
+          "summary": "儒家思想源头，修身齐家治国的根本经典。",
+          "tags": [
+            "儒家",
+            "经典",
+            "修身"
+          ],
+          "id": "philosophy-2",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "politics",
+      "name": "政治军事",
+      "color": "#6C8EF5",
+      "size": 1.28,
+      "orbitRadius": 42.5,
+      "speed": 0.26,
+      "satellites": [
+        {
+          "title": "孙子兵法",
+          "author": "孙武",
+          "summary": "东方兵学圣典，谋略与竞争的底层逻辑。",
+          "tags": [
+            "兵学",
+            "战略",
+            "经典"
+          ],
+          "id": "politics-1",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "finance",
+      "name": "金融理财",
+      "color": "#06D6A0",
+      "size": 1.4,
+      "orbitRadius": 47.0,
+      "speed": 0.24,
+      "satellites": [
+        {
+          "title": "穷爸爸富爸爸",
+          "author": "罗伯特·清崎",
+          "summary": "资产与负债的启蒙，财商教育入门。",
+          "tags": [
+            "财商",
+            "入门",
+            "理财"
+          ],
+          "id": "finance-1",
+          "cover": ""
+        },
+        {
+          "title": "聪明的投资者",
+          "author": "本杰明·格雷厄姆",
+          "summary": "价值投资圣经，安全边际思想源头。",
+          "tags": [
+            "价值投资",
+            "巴菲特",
+            "经典"
+          ],
+          "id": "finance-2",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "management",
+      "name": "经营管理",
+      "color": "#FF9F1C",
+      "size": 1.22,
+      "orbitRadius": 51.5,
+      "speed": 0.22,
+      "satellites": [
+        {
+          "title": "高效能人士的七个习惯",
+          "author": "史蒂芬·柯维",
+          "summary": "从依赖到互赖，个人与团队效能框架。",
+          "tags": [
+            "效能",
+            "自我管理",
+            "职场"
+          ],
+          "id": "management-1",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "fiction",
+      "name": "小说",
+      "color": "#E0715B",
+      "size": 1.33,
+      "orbitRadius": 56.0,
+      "speed": 0.2,
+      "satellites": [
+        {
+          "title": "百年孤独",
+          "author": "加西亚·马尔克斯",
+          "summary": "魔幻现实主义巅峰，布恩迪亚家族七代兴衰。",
+          "tags": [
+            "魔幻现实",
+            "小说",
+            "经典"
+          ],
+          "id": "fiction-1",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "art",
+      "name": "艺术",
+      "color": "#F15BB5",
+      "size": 1.15,
+      "orbitRadius": 60.5,
+      "speed": 0.19,
+      "satellites": [
+        {
+          "title": "艺术的故事",
+          "author": "贡布里希",
+          "summary": "通俗易懂的艺术史通览，从洞穴壁画到现代。",
+          "tags": [
+            "艺术史",
+            "入门",
+            "艺术"
+          ],
+          "id": "art-1",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "literature",
+      "name": "文学",
+      "color": "#9B5DE5",
+      "size": 1.18,
+      "orbitRadius": 65.0,
+      "speed": 0.18,
+      "satellites": [
+        {
+          "title": "人间词话",
+          "author": "王国维",
+          "summary": "古典美学境界说，诗词鉴赏的标尺。",
+          "tags": [
+            "诗词",
+            "美学",
+            "古典"
+          ],
+          "id": "literature-1",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "medicine",
+      "name": "医学健康",
+      "color": "#00BBF9",
+      "size": 1.24,
+      "orbitRadius": 69.5,
+      "speed": 0.17,
+      "satellites": [
+        {
+          "title": "中国居民膳食指南",
+          "author": "中国营养学会",
+          "summary": "科学饮食的权威参照，平衡膳食宝塔。",
+          "tags": [
+            "健康",
+            "饮食",
+            "科普"
+          ],
+          "id": "medicine-1",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "life",
+      "name": "生活百科",
+      "color": "#80ED99",
+      "size": 1.12,
+      "orbitRadius": 74.0,
+      "speed": 0.16,
+      "satellites": [
+        {
+          "title": "断舍离",
+          "author": "山下英子",
+          "summary": "通过整理物品整理人生，极简生活入门。",
+          "tags": [
+            "极简",
+            "生活",
+            "整理"
+          ],
+          "id": "life-1",
+          "cover": ""
+        }
+      ]
+    },
+    {
+      "id": "poetry",
+      "name": "诗歌散文",
+      "color": "#FEE440",
+      "size": 1.05,
+      "orbitRadius": 78.5,
+      "speed": 0.15,
+      "satellites": [
+        {
+          "title": "飞鸟集",
+          "author": "泰戈尔",
+          "summary": "短小哲思诗句，自然与爱的吟唱。",
+          "tags": [
+            "诗歌",
+            "泰戈尔",
+            "哲思"
+          ],
+          "id": "poetry-1",
+          "cover": ""
+        }
+      ]
+    }
+  ]
+}

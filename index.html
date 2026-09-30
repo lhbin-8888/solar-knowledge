@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌌 我的太阳系知识库</title>
+  <link rel="stylesheet" href="./css/style.css" />
+  <!-- marked：本地化 Markdown 渲染 -->
+  <script src="./assets/js/marked.min.js"></script>
+  <!-- Three.js 模块映射（本地化，离线可用） -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./assets/js/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- 3D 画布 -->
+  <canvas id="scene"></canvas>
+
+  <!-- 行星名称标签层 -->
+  <div id="labels"></div>
+
+  <!-- 顶部栏 -->
+  <header id="topbar">
+    <div class="brand">🌌 我的太阳系知识库</div>
+    <div class="search-wrap">
+      <input id="search" class="search" placeholder="搜索书名 / 作者 / 标签…" />
+      <button id="search-clear" class="search-clear" title="清空">✕</button>
+    </div>
+    <div class="actions">
+      <button id="btn-reset" class="btn ghost" title="回到全景">↺ 全景</button>
+      <button id="btn-admin" class="btn primary">⚙ 管理</button>
+    </div>
+  </header>
+
+  <!-- 标签筛选条 -->
+  <div id="filterbar" class="hidden">
+    <span class="flabel">标签筛选：</span>
+    <div id="tagchips"></div>
+    <button id="clear-filter" class="btn ghost tiny">清除筛选</button>
+  </div>
+
+  <!-- 底部提示 -->
+  <footer id="hint">
+    拖拽旋转视角 · 滚轮缩放 · 点击行星查看其卫星 · 点击卫星打开书籍
+  </footer>
+
+  <!-- 离线提示条 -->
+  <div id="offline-bar" class="hidden">⚠ 当前为离线预览：管理/新增功能需运行 <b>start.bat</b> 启动本地服务后使用。</div>
+
+  <!-- 选中分类后的详情面板 -->
+  <aside id="detail" class="hidden">
+    <div class="detail-head">
+      <span id="detail-dot" class="dot"></span>
+      <h2 id="detail-title">分类</h2>
+      <button id="detail-close" class="icon-btn" title="返回">✕</button>
+    </div>
+    <p id="detail-sub" class="muted"></p>
+    <div id="sat-list" class="sat-list"></div>
+    <p class="tip muted">提示：在 3D 场景中点击发光的小卫星，也可直接打开对应书籍。</p>
+  </aside>
+
+  <!-- 搜索结果面板 -->
+  <aside id="results" class="hidden">
+    <div class="detail-head">
+      <span class="dot" style="background:#7cc4ff;color:#7cc4ff"></span>
+      <h2 id="results-title">搜索结果</h2>
+      <button id="results-close" class="icon-btn" title="关闭">✕</button>
+    </div>
+    <p id="results-sub" class="muted"></p>
+    <div id="results-list" class="sat-list"></div>
+  </aside>
+
+  <!-- 书籍阅读弹窗 -->
+  <div id="book-modal" class="modal hidden">
+    <div class="modal-card book-card">
+      <div id="book-cover" class="book-cover"></div>
+      <div class="modal-head">
+        <div>
+          <h2 id="book-title">书名</h2>
+          <div id="book-author" class="muted"></div>
+          <div id="book-tags" class="book-tags"></div>
+        </div>
+        <button class="icon-btn" data-close="book">✕</button>
+      </div>
+      <div id="book-body" class="book-body markdown"></div>
+    </div>
+  </div>
+
+  <!-- 管理后台弹窗 -->
+  <div id="admin-modal" class="modal hidden">
+    <div class="modal-card admin-card">
+      <div class="modal-head">
+        <h2>⚙ 知识库管理</h2>
+        <button class="icon-btn" data-close="admin">✕</button>
+      </div>
+      <div class="admin-body">
+        <div class="admin-left">
+          <label>选择分类（行星）</label>
+          <select id="admin-cat"></select>
+          <div class="admin-cat-actions">
+            <button id="btn-add-cat" class="btn small primary">＋ 新增分类</button>
+            <button id="btn-del-cat" class="btn small danger">🗑 删除此分类</button>
+          </div>
+          <div id="add-cat-box" class="add-cat-box hidden">
+            <input id="f-cat-name" class="field" placeholder="分类名称，如：占星学" />
+            <input id="f-cat-color" class="field" placeholder="颜色（可留空，自动分配），如 #FF6B6B" />
+            <div class="admin-actions">
+              <button id="btn-cat-ok" class="btn primary">确定新增</button>
+              <button id="btn-cat-cancel" class="btn ghost">取消</button>
+            </div>
+          </div>
+          <div id="admin-sat-list" class="admin-sat-list"></div>
+        </div>
+        <div class="admin-right">
+          <h3 id="admin-form-title">➕ 新增卫星（书籍 / 知识点）</h3>
+          <input id="f-title" class="field" placeholder="书名 / 知识点标题" />
+          <input id="f-author" class="field" placeholder="作者（可选）" />
+          <input id="f-summary" class="field" placeholder="一句话简介（可选）" />
+          <input id="f-tags" class="field" placeholder="标签，用逗号分隔，如：经典,心理学" />
+          <input id="f-cover" class="field" placeholder="封面图 URL（可留空，自动生成渐变封面；也可填 /books/covers/xxx.png）" />
+          <textarea id="f-content" class="field area" placeholder="内容（支持 Markdown：# 标题、**加粗**、- 列表、> 引用）"></textarea>
+          <div class="admin-actions">
+            <button id="f-save" class="btn primary">保存</button>
+            <button id="f-cancel" class="btn ghost hidden">取消编辑</button>
+          </div>
+          <p class="muted small">所有改动实时写入 <code>D:\线上知识库平台\data\knowledge.json</code> 与各分类 <code>books/</code> 下的 .md 文件</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 轻提示 -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

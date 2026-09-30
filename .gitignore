@@ -1,0 +1,11 @@
+# 部署到 GitHub/Gitee + Render 时的忽略项
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.DS_Store
+Thumbs.db
+
+# 初始数据(data/knowledge.json 与 books/*.md) 需进仓库作为种子，不忽略
+# start.bat 为本地启动脚本，无害，一并提交
