@@ -65,7 +65,7 @@ def read_book(cat_id, sat_id):
 
 
 def write_book(cat_id, sat_id, content):
-    d = os.path.join(BASE, "books", cat_id)
+    d = os.path.join(DATA_ROOT, "books", cat_id)
     os.makedirs(d, exist_ok=True)
     with open(book_path(cat_id, sat_id), "w", encoding="utf-8") as f:
         f.write(content or "")
