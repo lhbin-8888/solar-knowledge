@@ -11,6 +11,7 @@ const planets = [];          // {cat, pivot, mesh, orbitRadius, speed, labelEl}
 const orbitLines = [];       // THREE.LineLoop[]  便于重建时清理
 const satGroups = {};        // catId -> {group, sats:[{mesh, angle, radius, speed, yOff}]}
 const dipperStars = [];      // 北斗七星闪烁用：{mat, base, amp, speed, phase}
+let starfieldMat = null;     // 背景星空 ShaderMaterial，animate 中更新 uTime 实现逐点慢闪
 let selectedCat = null;
 let paused = false;          // 选中行星后暂停公转，便于点击卫星
 let hoverObj = null;
@@ -102,6 +103,8 @@ function buildStarfield() {
   const N = 4200;
   const pos = new Float32Array(N * 3);
   const col = new Float32Array(N * 3);
+  const phase = new Float32Array(N);
+  const speed = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const r = 400 + Math.random() * 900;
     const th = Math.random() * Math.PI * 2;
@@ -117,17 +120,46 @@ function buildStarfield() {
     else if (tint < 0.40) { cr = b * 0.78; cg = b * 0.88; cb = b;        } // 偏蓝
     else                  { cr = b;        cg = b;        cb = b;        } // 纯白
     col[i*3] = cr; col[i*3+1] = cg; col[i*3+2] = cb;
+    phase[i] = Math.random() * Math.PI * 2;
+    speed[i] = 0.25 + Math.random() * 0.9;   // 缓慢闪烁速度（错落）
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const m = new THREE.PointsMaterial({
-    size: 2.4, sizeAttenuation: true,
-    map: makeDotTexture(),                 // 关键：圆形贴图，否则点精灵是方块
-    vertexColors: true, transparent: true, opacity: 1.0,
-    alphaTest: 0.02, depthWrite: false, blending: THREE.AdditiveBlending
+  g.setAttribute('aPhase', new THREE.BufferAttribute(phase, 1));
+  g.setAttribute('aSpeed', new THREE.BufferAttribute(speed, 1));
+  // 逐点慢闪：用 ShaderMaterial 按 uTime + 每点随机相位/速度算 alpha，片元里画圆点
+  starfieldMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uTime: { value: 0 }, uSize: { value: 2.6 } },
+    vertexShader: `
+      attribute vec3 color;
+      attribute float aPhase;
+      attribute float aSpeed;
+      uniform float uTime;
+      uniform float uSize;
+      varying vec3 vColor;
+      varying float vAlpha;
+      void main() {
+        vColor = color;
+        vAlpha = 0.5 + 0.5 * sin(uTime * aSpeed + aPhase);   // 0~1 呼吸
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = clamp(uSize * (350.0 / -mv.z), 1.0, 6.0);
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      varying float vAlpha;
+      void main() {
+        float d = length(gl_PointCoord - vec2(0.5));
+        if (d > 0.5) discard;
+        float a = smoothstep(0.5, 0.0, d);   // 中心亮、边缘透明（圆形）
+        gl_FragColor = vec4(vColor, a * vAlpha);
+      }
+    `
   });
-  scene.add(new THREE.Points(g, m));
+  scene.add(new THREE.Points(g, starfieldMat));
 }
 
 /* 星际云团：用加色混合的柔光精灵铺在远景球壳上 */
@@ -229,8 +261,8 @@ function buildDipper() {
   const lineMat = new THREE.LineBasicMaterial({ color: 0x9fb8ff, transparent: true, opacity: 0.22 });
   group.add(new THREE.Line(lineGeo, lineMat));
 
-  // 放到远景、略微抬高偏左后方的天区
-  group.position.set(-300, 170, -380);
+  // 放到旋转盘（黄道面）右上角边缘、贴近盘面上方
+  group.position.set(215, 45, -180);
   scene.add(group);
 }
 
@@ -375,6 +407,8 @@ function animate() {
     const d = dipperStars[i];
     d.mat.opacity = d.base + d.amp * Math.sin(elapsed * d.speed + d.phase);
   }
+  // 背景满天星逐点慢闪
+  if (starfieldMat) starfieldMat.uniforms.uTime.value = elapsed;
 
   planets.forEach((p) => {
     const entry = satGroups[p.cat.id];
