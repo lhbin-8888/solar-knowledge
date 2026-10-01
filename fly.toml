@@ -1,0 +1,28 @@
+app = "solar-knowledge"
+primary_region = "sin"  # 选离你近的区域：sin(新加坡)/hkg(香港)/nrt(东京)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  DATA_ROOT = "/app/data"
+  HOST = "0.0.0.0"
+
+[mounts]
+  source = "kb-data"
+  destination = "/app/data"
+
+[[services]]
+  internal_port = 8000
+  protocol = "tcp"
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256

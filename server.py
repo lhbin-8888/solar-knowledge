@@ -1,24 +1,28 @@
 # -*- coding: utf-8 -*-
 """
 太阳系知识库 —— 本地后端服务
-- 静态托管前端（D:\线上知识库平台），仅允许白名单目录（assets/css/js/books 与 index.html）
+- 静态托管前端（D:\线上知识库平台），仅允许白名单目录（assets/css/js/data/books 与 index.html；data/knowledge.json 受保护不暴露）
 - /api/data            GET   读取全部知识树（正文 content 由 books/<分类>/<id>.md 内联）
 - /api/category        POST  新增分类（行星）；返回新分类对象（含自动生成的 id / 轨道）
 - /api/category/<id>/satellite   POST  给某分类新增卫星（书籍）
 - /api/category/<id>   DELETE 删除整个分类（连带 books/<分类>/ 目录与全部 .md）
 - /api/satellite/<id>  PUT    修改卫星   DELETE  删除卫星
-元数据持久化到 data/knowledge.json；正文持久化到 books/<分类>/<id>.md
+元数据与正文均持久化到 data/（knowledge.json 与 books/<分类>/<id>.md）；增删改会经方案 B 自动 git 回写
 """
 import json
 import os
 import re
 import shutil
 import random
+import subprocess
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-DATA_FILE = os.path.join(BASE, "data", "knowledge.json")
+# 数据根：本地默认 BASE/data；部署时可设 DATA_ROOT 指向持久卷（方案 C），books/ 也在此根下
+DATA_ROOT = os.environ.get("DATA_ROOT", os.path.join(BASE, "data"))
+DATA_FILE = os.path.join(DATA_ROOT, "knowledge.json")
 PORT = int(os.environ.get("PORT", "8000"))
 HOST = os.environ.get("HOST", "0.0.0.0")
 
@@ -38,7 +42,7 @@ MIME = {
 }
 
 # 允许被静态访问的目录前缀（防止 data/knowledge.json、server.py、tools/ 被直接读取）
-ALLOWED_PREFIX = ("assets/", "css/", "js/", "books/")
+ALLOWED_PREFIX = ("assets/", "css/", "js/", "data/books/")
 ALLOWED_FILES = ("index.html",)
 
 ID_RE = re.compile(r"^[A-Za-z0-9_\-]+$")
@@ -49,7 +53,7 @@ CAT_PALETTE = ["#FF6B6B", "#FFD166", "#06D6A0", "#118AB2", "#9B5DE5",
 
 
 def book_path(cat_id, sat_id):
-    return os.path.join(BASE, "books", cat_id, sat_id + ".md")
+    return os.path.join(DATA_ROOT, "books", cat_id, sat_id + ".md")
 
 
 def read_book(cat_id, sat_id):
@@ -71,6 +75,78 @@ def delete_book(cat_id, sat_id):
     p = book_path(cat_id, sat_id)
     if os.path.isfile(p):
         os.remove(p)
+
+
+# ===================== Git 自动回写（方案 B：公网数据永久持久化） =====================
+# 每次增删改后，把 data/ 与 books/ 的最新内容提交并推送回 GitHub（或 GITHUB_PUSH_URL 指定的远端）。
+# 即便部署平台（如 Render 免费层）磁盘被重置，实例重启时 git pull 也能从仓库恢复最新数据；
+# 方案 C（Railway 持久卷）进一步把 data/books 落到持久卷，二者互补、互为兜底。
+
+def _git_bin():
+    env = os.environ.get("GIT_BIN")
+    if env:
+        return env
+    local = "C:/Users/73873/.workbuddy/binaries/PortableGit/versions/1.2.0/cmd/git.exe"
+    if os.path.exists(local):
+        return local
+    return "git"
+
+
+def _git_env():
+    e = dict(os.environ)
+    for k in ("http_proxy", "https_proxy", "HTTP_PROXY", "HTTPS_PROXY"):
+        e.pop(k, None)
+    e["GIT_TERMINAL_PROMPT"] = "0"
+    ssh = os.environ.get("GIT_SSH_CMD") or "C:/Users/73873/.workbuddy/binaries/PortableGit/versions/1.2.0/usr/bin/ssh.exe"
+    if os.path.exists(ssh):
+        e["GIT_SSH_COMMAND"] = ssh
+    return e
+
+
+def _git_push_url():
+    # 部署环境用 https://<token>@github.com/... 形式的 GITHUB_PUSH_URL；本地走 github SSH remote
+    return os.environ.get("GITHUB_PUSH_URL") or "github"
+
+
+def _git_run(args):
+    try:
+        return subprocess.run([_git_bin()] + args, cwd=BASE, env=_git_env(),
+                               capture_output=True, text=True, timeout=60)
+    except Exception as ex:
+        print(f"[git] 调用异常: {ex}")
+        return None
+
+
+def git_auto_pull():
+    """启动时从远端同步运行期写入的最新数据（失败容忍，不阻断启动）。"""
+    res = _git_run(["pull", "--rebase", "--autostash", _git_push_url(), "main"])
+    if res and res.returncode == 0:
+        print("[git] 已从远端同步最新数据")
+    else:
+        print("[git] 启动同步远端失败/无更新（使用本地数据），不影响服务")
+
+
+def git_commit_push(reason="web edit"):
+    """把 data/ 与 books/ 改动提交并推送（失败容忍，绝不阻断主流程）。"""
+    _git_run(["add", "data"])
+    st = _git_run(["status", "--porcelain", "data"])
+    if st is None or not st.stdout.strip():
+        return
+    cm = _git_run(["-c", "user.name=solar-kb-bot", "-c", "user.email=bot@solar.kb",
+                   "commit", "-m", f"auto: {reason}"])
+    if cm is None or cm.returncode != 0:
+        print(f"[git] commit 失败: {(cm.stderr[:160] if cm else 'unknown')}")
+        return
+    res = _git_run(["push", _git_push_url(), "main"])
+    if res is None or res.returncode != 0:
+        print(f"[git] push 失败（数据已落本地，下次改动再重试）: {(res.stderr[:160] if res else 'unknown')}")
+    else:
+        print("[git] 已自动推送最新数据到远端")
+
+
+def schedule_git_push(reason="web edit"):
+    """后台线程异步推送，避免阻塞 HTTP 请求。"""
+    threading.Thread(target=git_commit_push, args=(reason,), daemon=True).start()
 
 
 def load_data():
@@ -100,6 +176,7 @@ def save_data(data):
         clean["categories"].append(cc)
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(clean, f, ensure_ascii=False, indent=2)
+    schedule_git_push("save metadata")
 
 
 def next_sat_id(data, cat_id):
@@ -306,10 +383,11 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    git_auto_pull()  # 启动即从远端恢复运行期写入的最新数据（方案 B 兜底）
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"🌌 太阳系知识库已启动： http://{HOST}:{PORT}")
     print(f"   数据文件： {DATA_FILE}")
-    print(f"   正文目录： {os.path.join(BASE, 'books')}")
+    print(f"   数据目录： {os.path.join(DATA_ROOT, 'books')}")
     print("   按 Ctrl+C 停止")
     try:
         server.serve_forever()
