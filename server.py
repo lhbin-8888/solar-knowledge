@@ -288,6 +288,14 @@ class Handler(BaseHTTPRequestHandler):
         return files, fields
 
     def _handle_upload(self):
+        MAX_UPLOAD = 50 * 1024 * 1024  # 50MB 服务端上限（前端已限制 30MB）
+        cl = int(self.headers.get("Content-Length", 0) or 0)
+        if cl <= 0:
+            self._send(400, {"error": "no content"})
+            return
+        if cl > MAX_UPLOAD:
+            self._send(413, {"error": "文件过大，服务端上限 50MB"})
+            return
         try:
             files, fields = self._parse_multipart()
         except Exception as e:

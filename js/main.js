@@ -1013,7 +1013,10 @@ function bindAdminResize() {
 }
 
 /* 上传本地文件：真正上传到后端 /api/upload，作为附件保存（不读入内容框，避免编码乱码）。
-   触发：index.html 用 <label for="f-file"> 原生关联；change 时取文件走 fetch(FormData)。 */
+   触发：index.html 用 <label for="f-file"> 原生关联；change 时取文件走 fetch(FormData)。
+   加固：限制单文件体积（避免超大文件拖垮请求/卡死）、设上传超时（避免无限等待无反馈）。 */
+const MAX_UPLOAD_BYTES = 30 * 1024 * 1024; // 30MB
+const UPLOAD_TIMEOUT_MS = 90000;           // 90s
 function bindFileUpload() {
   const input = document.getElementById('f-file');
   const btn = document.getElementById('btn-upload');
@@ -1022,6 +1025,11 @@ function bindFileUpload() {
     const file = input.files && input.files[0];
     if (!file) return;
     if (!adminCatId) { toast('请先选择左侧分类再上传'); input.value = ''; return; }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast(`文件过大（${(file.size/1048576).toFixed(1)}MB），上限 30MB，请压缩或分拆后上传`);
+      input.value = '';
+      return;
+    }
     if (pendingAttachments.some((a) => a.name === file.name)) {
       if (!confirm(`已存在同名附件「${file.name}」，仍要再上传一份？`)) { input.value = ''; return; }
     }
@@ -1031,16 +1039,24 @@ function bindFileUpload() {
     const old = btn.textContent;
     btn.textContent = '⏳ 上传中…';
     btn.classList.add('disabled');
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), UPLOAD_TIMEOUT_MS);
     try {
-      const r = await fetch('/api/upload', { method: 'POST', body: fd });
-      if (!r.ok) throw new Error('status ' + r.status);
+      const r = await fetch('/api/upload', { method: 'POST', body: fd, signal: ctrl.signal });
+      if (!r.ok) {
+        let msg = 'status ' + r.status;
+        try { const j = await r.json(); if (j && j.error) msg = j.error; } catch (_) {}
+        throw new Error(msg);
+      }
       const j = await r.json();
       pendingAttachments.push({ name: file.name, url: j.url });
       renderAttachmentChips();
       toast('已添加附件：' + file.name);
     } catch (e) {
-      toast('上传失败：' + e.message);
+      if (e.name === 'AbortError') toast('上传超时（' + (UPLOAD_TIMEOUT_MS/1000) + 's），请重试或换更小的文件');
+      else toast('上传失败：' + e.message);
     } finally {
+      clearTimeout(timer);
       btn.textContent = old;
       btn.classList.remove('disabled');
       input.value = '';
