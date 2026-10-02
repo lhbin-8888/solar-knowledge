@@ -998,13 +998,12 @@ function bindAdminResize() {
   });
 }
 
-/* 上传本地文本文件，读入「内容」文本域（.md / .txt 等 UTF-8 文本） */
+/* 上传本地文本文件，读入「内容」文本域（.md / .txt 等 UTF-8 文本）。
+   触发方式：index.html 用 <label for="f-file"> 原生关联（不依赖 JS 间接 click，规避部分浏览器/WebView 屏蔽弹框） */
 function bindFileUpload() {
-  const btn = document.getElementById('btn-upload');
   const input = document.getElementById('f-file');
   const area = document.getElementById('f-content');
-  if (!btn || !input || !area) return;
-  btn.addEventListener('click', () => input.click());
+  if (!input || !area) return;
   input.addEventListener('change', () => {
     const file = input.files && input.files[0];
     if (!file) return;
@@ -1013,7 +1012,12 @@ function bindFileUpload() {
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => { area.value = String(reader.result || ''); toast('已载入文件：' + file.name); };
+    reader.onload = () => {
+      area.value = String(reader.result || '');
+      toast('已载入文件：' + file.name);
+      area.focus();
+      area.scrollIntoView({ block: 'nearest' });
+    };
     reader.onerror = () => toast('读取文件失败，请检查文件编码（建议 UTF-8）');
     reader.readAsText(file, 'utf-8');
     input.value = '';
