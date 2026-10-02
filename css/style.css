@@ -218,3 +218,26 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   border-radius:9px;padding:6px 12px;transition:.15s}
 .book-link:hover{background:rgba(124,196,255,.26)}
 
+/* 附件：表单中的 chips 列表 + 书籍详情中的可点开链接 */
+.att-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.att-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;
+  background:rgba(124,196,255,.12);border:1px solid rgba(124,196,255,.32);
+  border-radius:9px;padding:5px 8px 5px 10px;font-size:12.5px}
+.att-chip a{color:#bfe0ff;text-decoration:none;max-width:240px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.att-chip a:hover{text-decoration:underline}
+.att-x{flex:none;cursor:pointer;border:0;background:transparent;color:#9aa6c4;
+  font-size:12px;line-height:1;padding:2px 4px;border-radius:6px}
+.att-x:hover{background:rgba(255,255,255,.16);color:#ff9a9a}
+
+.book-attachments{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.att-title{font-size:13px;color:#cdd6f5;margin-bottom:2px}
+.att-link{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;
+  color:#bfe0ff;text-decoration:none;background:rgba(124,196,255,.14);
+  border:1px solid rgba(124,196,255,.35);border-radius:9px;padding:8px 12px;
+  transition:.15s;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att-link:hover{background:rgba(124,196,255,.26)}
+
+/* 上传中禁用按钮，防重复点击 */
+.btn.disabled{pointer-events:none;opacity:.55}
+

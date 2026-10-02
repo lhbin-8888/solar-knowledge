@@ -17,7 +17,7 @@ import random
 import subprocess
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 # 数据根：本地默认 BASE/data；部署时可设 DATA_ROOT 指向持久卷（方案 C），books/ 也在此根下
@@ -39,10 +39,20 @@ MIME = {
     ".gif": "image/gif",
     ".svg": "image/svg+xml",
     ".ico": "image/x-icon",
+    ".txt": "text/plain; charset=utf-8",
+    ".pdf": "application/pdf",
+    ".csv": "text/csv; charset=utf-8",
+    ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xls": "application/vnd.ms-excel",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".zip": "application/zip",
 }
 
 # 允许被静态访问的目录前缀（防止 data/knowledge.json、server.py、tools/ 被直接读取）
-ALLOWED_PREFIX = ("assets/", "css/", "js/", "data/books/")
+ALLOWED_PREFIX = ("assets/", "css/", "js/", "data/books/", "data/uploads/")
 ALLOWED_FILES = ("index.html",)
 
 ID_RE = re.compile(r"^[A-Za-z0-9_\-]+$")
@@ -75,6 +85,17 @@ def delete_book(cat_id, sat_id):
     p = book_path(cat_id, sat_id)
     if os.path.isfile(p):
         os.remove(p)
+
+
+def secure_filename(name):
+    """保留字母/数字/中文/点/横线，其余替换为下划线，去掉路径与首尾点。"""
+    name = os.path.basename(name).replace('\\', '/').split('/')[-1]
+    name = re.sub(r'[^\w.\-\u4e00-\u9fff]+', '_', name)
+    return name.strip('._') or 'file'
+
+
+def upload_dir(cat_id):
+    return os.path.join(DATA_ROOT, "uploads", cat_id)
 
 
 # ===================== Git 自动回写（方案 B：公网数据永久持久化） =====================
@@ -162,6 +183,7 @@ def load_data():
             s.setdefault("cover", "")
             s.setdefault("desc", "")
             s.setdefault("link", "")
+            s.setdefault("attachments", [])
     return data
 
 
@@ -229,6 +251,78 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return {}
 
+    # ---------------- 文件上传（multipart，标准库无 cgi，自解析） ----------------
+    def _parse_multipart(self):
+        """返回 (files, fields)。files: name -> {filename, data(bytes)}；fields: name -> str。"""
+        ctype = self.headers.get("Content-Type", "")
+        m = re.match(r"multipart/form-data;\s*boundary=(.+)", ctype)
+        if not m:
+            return {}, {}
+        boundary = m.group(1).strip().strip('"')
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        if length <= 0:
+            return {}, {}
+        raw = self.rfile.read(length)
+        delim = ("--" + boundary).encode()
+        parts = raw.split(delim)
+        files, fields = {}, {}
+        for part in parts:
+            if not part.startswith(b"\r\n"):
+                continue
+            part = part[2:]
+            he = part.find(b"\r\n\r\n")
+            if he == -1:
+                continue
+            header = part[:he].decode("utf-8", "replace")
+            content = part[he + 4:]
+            if content.endswith(b"\r\n"):
+                content = content[:-2]
+            name_m = re.search(r'name="([^"]+)"', header)
+            fname_m = re.search(r'filename="([^"]*)"', header)
+            if not name_m:
+                continue
+            if fname_m and fname_m.group(1):
+                files[name_m.group(1)] = {"filename": fname_m.group(1), "data": content}
+            else:
+                fields[name_m.group(1)] = content.decode("utf-8", "replace")
+        return files, fields
+
+    def _handle_upload(self):
+        try:
+            files, fields = self._parse_multipart()
+        except Exception as e:
+            self._send(400, {"error": "解析上传失败: " + str(e)})
+            return
+        if not files:
+            self._send(400, {"error": "no file"})
+            return
+        cat_id = (fields.get("catId") or "").strip()
+        if not ID_RE.match(cat_id):
+            self._send(400, {"error": "catId required"})
+            return
+        data = load_data()
+        if not any(c["id"] == cat_id for c in data["categories"]):
+            self._send(404, {"error": "category not found"})
+            return
+        file = files.get("file") or next(iter(files.values()))
+        raw_name = file["filename"] or "file.bin"
+        safe = secure_filename(raw_name)
+        folder = upload_dir(cat_id)
+        os.makedirs(folder, exist_ok=True)
+        target = os.path.join(folder, safe)
+        if os.path.exists(target):
+            base, ext = os.path.splitext(safe)
+            i = 1
+            while os.path.exists(target):
+                target = os.path.join(folder, f"{base}_{i}{ext}")
+                i += 1
+            safe = os.path.basename(target)
+        with open(target, "wb") as f:
+            f.write(file["data"])
+        url = f"/data/uploads/{cat_id}/{safe}"
+        schedule_git_push("upload file")
+        self._send(201, {"url": url, "name": raw_name})
+
     # ---------------- GET ----------------
     def do_GET(self):
         path = urlparse(self.path).path
@@ -243,6 +337,9 @@ class Handler(BaseHTTPRequestHandler):
     # ---------------- POST ----------------
     def do_POST(self):
         path = urlparse(self.path).path
+        if path == "/api/upload":
+            self._handle_upload()
+            return
         m = re.match(r"^/api/category$", path)
         if m:
             self._create_category()
@@ -267,6 +364,7 @@ class Handler(BaseHTTPRequestHandler):
             "link": str(payload.get("link", "")).strip(),
             "tags": payload.get("tags", []) if isinstance(payload.get("tags"), list) else [],
             "cover": str(payload.get("cover", "")).strip(),
+            "attachments": payload.get("attachments", []) if isinstance(payload.get("attachments"), list) else [],
         }
         if not sat["title"]:
             self._send(400, {"error": "title required"})
@@ -319,6 +417,8 @@ class Handler(BaseHTTPRequestHandler):
         for k in ("title", "author", "summary", "desc", "link", "tags", "cover"):
             if k in payload:
                 sat[k] = str(payload[k]).strip() if k in ("cover", "link", "desc") else payload[k]
+        if "attachments" in payload and isinstance(payload["attachments"], list):
+            sat["attachments"] = [a for a in payload["attachments"] if isinstance(a, dict) and a.get("url")]
         if "content" in payload:
             write_book(cat["id"], sat_id, str(payload["content"]))
             sat["content"] = str(payload["content"])
@@ -337,9 +437,11 @@ class Handler(BaseHTTPRequestHandler):
             if idx is None:
                 self._send(404, {"error": "category not found"})
                 return
-            bdir = os.path.join(BASE, "books", cat_id)
-            if os.path.isdir(bdir):
-                shutil.rmtree(bdir)
+            # 清理该分类下的正文目录与上传目录（均在 DATA_ROOT 下）
+            for sub in ("books", "uploads"):
+                d = os.path.join(DATA_ROOT, sub, cat_id)
+                if os.path.isdir(d):
+                    shutil.rmtree(d)
             del data["categories"][idx]
             save_data(data)
             self._send(200, {"ok": True, "deleted": cat_id, "remaining": len(data["categories"])})
@@ -355,18 +457,27 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, {"error": "satellite not found"})
             return
         delete_book(cat["id"], sat_id)
+        for att in (sat.get("attachments") or []):
+            u = att.get("url")
+            if u:
+                fp = os.path.normpath(os.path.join(BASE, u.lstrip("/")))
+                if fp.startswith(BASE) and os.path.isfile(fp):
+                    try: os.remove(fp)
+                    except OSError: pass
         cat["satellites"].remove(sat)
         save_data(data)
         self._send(200, {"ok": True})
 
     # ---------------- 静态文件（白名单） ----------------
     def _serve_file(self, rel):
-        norm = rel.replace("\\", "/")
+        # 浏览器传入的 URL 可能含百分号编码（中文/空格文件名），先解码再匹配与落盘
+        dec = unquote(rel)
+        norm = dec.replace("\\", "/")
         allowed = norm in ALLOWED_FILES or norm.startswith(ALLOWED_PREFIX)
         if not allowed:
             self._send(403, {"error": "forbidden"})
             return
-        full = os.path.normpath(os.path.join(BASE, rel))
+        full = os.path.normpath(os.path.join(BASE, dec))
         if not full.startswith(BASE):
             self._send(403, {"error": "forbidden"})
             return

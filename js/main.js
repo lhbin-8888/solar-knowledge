@@ -502,6 +502,14 @@ function openBook(catId, satId) {
   const descEl = document.getElementById('book-desc');
   if (sat.desc) { descEl.textContent = sat.desc; descEl.classList.remove('hidden'); }
   else { descEl.textContent = ''; descEl.classList.add('hidden'); }
+  const attBox = document.getElementById('book-attachments');
+  if (sat.attachments && sat.attachments.length) {
+    attBox.innerHTML = '<div class="att-title">📎 附件（点击打开）</div>' +
+      (sat.attachments.map((a) => `<a class="att-link" href="${a.url}" target="_blank" rel="noopener">📄 ${esc(a.name || a.url)}</a>`).join(''));
+    attBox.classList.remove('hidden');
+  } else {
+    attBox.innerHTML = ''; attBox.classList.add('hidden');
+  }
   const linkWrap = document.getElementById('book-link-wrap');
   const linkEl = document.getElementById('book-link');
   if (sat.link) { linkEl.href = sat.link; linkWrap.classList.remove('hidden'); }
@@ -733,6 +741,7 @@ function clearFilter() {
 /* ===================== 管理后台 ===================== */
 let adminCatId = null;
 let editingSatId = null;
+let pendingAttachments = [];   // 当前表单的附件列表 [{name, url}]，保存时写入卫星元数据
 
 function openAdmin() {
   if (OFFLINE) { toast('管理功能需启动本地服务（start.bat）'); return; }
@@ -776,6 +785,8 @@ function resetForm() {
   document.getElementById('f-cover').value = '';
   document.getElementById('f-content').value = '';
   document.getElementById('f-file').value = '';
+  document.getElementById('f-attachments').innerHTML = '';
+  pendingAttachments = [];
   document.getElementById('admin-form-title').textContent = '➕ 新增卫星（书籍 / 知识点）';
   document.getElementById('f-cancel').classList.add('hidden');
 }
@@ -790,6 +801,8 @@ function startEdit(sat) {
   document.getElementById('f-tags').value = (sat.tags || []).join(', ');
   document.getElementById('f-cover').value = sat.cover || '';
   document.getElementById('f-content').value = sat.content || '';
+  pendingAttachments = (sat.attachments || []).slice();
+  renderAttachmentChips();
   document.getElementById('admin-form-title').textContent = '✏ 编辑：' + sat.title;
   document.getElementById('f-cancel').classList.remove('hidden');
 }
@@ -805,7 +818,8 @@ async function saveSat() {
     summary: document.getElementById('f-summary').value.trim(),
     desc: document.getElementById('f-desc').value.trim(),
     link: document.getElementById('f-link').value.trim(),
-    tags, cover, content };
+    tags, cover, content,
+    attachments: pendingAttachments.slice() };
   try {
     let url, method;
     if (editingSatId) { url = '/api/satellite/' + editingSatId; method = 'PUT'; }
@@ -998,29 +1012,57 @@ function bindAdminResize() {
   });
 }
 
-/* 上传本地文本文件，读入「内容」文本域（.md / .txt 等 UTF-8 文本）。
-   触发方式：index.html 用 <label for="f-file"> 原生关联（不依赖 JS 间接 click，规避部分浏览器/WebView 屏蔽弹框） */
+/* 上传本地文件：真正上传到后端 /api/upload，作为附件保存（不读入内容框，避免编码乱码）。
+   触发：index.html 用 <label for="f-file"> 原生关联；change 时取文件走 fetch(FormData)。 */
 function bindFileUpload() {
   const input = document.getElementById('f-file');
-  const area = document.getElementById('f-content');
-  if (!input || !area) return;
-  input.addEventListener('change', () => {
+  const btn = document.getElementById('btn-upload');
+  if (!input || !btn) return;
+  input.addEventListener('change', async () => {
     const file = input.files && input.files[0];
     if (!file) return;
-    if (area.value.trim() && !confirm(`内容框已有文字，上传「${file.name}」将覆盖其中内容，继续？`)) {
-      input.value = '';
-      return;
+    if (!adminCatId) { toast('请先选择左侧分类再上传'); input.value = ''; return; }
+    if (pendingAttachments.some((a) => a.name === file.name)) {
+      if (!confirm(`已存在同名附件「${file.name}」，仍要再上传一份？`)) { input.value = ''; return; }
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      area.value = String(reader.result || '');
-      toast('已载入文件：' + file.name);
-      area.focus();
-      area.scrollIntoView({ block: 'nearest' });
-    };
-    reader.onerror = () => toast('读取文件失败，请检查文件编码（建议 UTF-8）');
-    reader.readAsText(file, 'utf-8');
-    input.value = '';
+    const fd = new FormData();
+    fd.append('catId', adminCatId);
+    fd.append('file', file, file.name);
+    const old = btn.textContent;
+    btn.textContent = '⏳ 上传中…';
+    btn.classList.add('disabled');
+    try {
+      const r = await fetch('/api/upload', { method: 'POST', body: fd });
+      if (!r.ok) throw new Error('status ' + r.status);
+      const j = await r.json();
+      pendingAttachments.push({ name: file.name, url: j.url });
+      renderAttachmentChips();
+      toast('已添加附件：' + file.name);
+    } catch (e) {
+      toast('上传失败：' + e.message);
+    } finally {
+      btn.textContent = old;
+      btn.classList.remove('disabled');
+      input.value = '';
+    }
+  });
+}
+
+/* 渲染表单中的附件列表（可删除） */
+function renderAttachmentChips() {
+  const box = document.getElementById('f-attachments');
+  if (!box) return;
+  box.innerHTML = '';
+  pendingAttachments.forEach((att, idx) => {
+    const chip = document.createElement('span');
+    chip.className = 'att-chip';
+    chip.innerHTML = `<a href="${att.url}" target="_blank" rel="noopener">📎 ${esc(att.name)}</a>`;
+    const x = document.createElement('button');
+    x.type = 'button'; x.className = 'att-x'; x.textContent = '✕';
+    x.title = '移除附件';
+    x.onclick = () => { pendingAttachments.splice(idx, 1); renderAttachmentChips(); };
+    chip.appendChild(x);
+    box.appendChild(chip);
   });
 }
 
