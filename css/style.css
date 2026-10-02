@@ -106,12 +106,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 .markdown strong{color:#fff}
 
 /* 管理后台 */
-.admin-card{width:860px}
-.admin-body{display:flex;gap:0;min-height:420px}
-.admin-left{width:300px;border-right:1px solid var(--border);padding:18px;display:flex;
-  flex-direction:column;gap:10px}
+.admin-card{position:fixed;left:0;top:0;width:860px;height:660px;max-width:none;max-height:none;overflow:hidden}
+.admin-body{display:flex;gap:0;flex:1;min-height:0;overflow:hidden}
+.admin-left{width:300px;flex:0 0 300px;border-right:1px solid var(--border);padding:18px;display:flex;
+  flex-direction:column;gap:10px;overflow-y:auto}
 .admin-left label{font-size:13px;color:var(--muted)}
-.admin-right{padding:18px 20px;flex:1;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.admin-right{padding:18px 20px;flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
 #admin-cat{background:var(--panel);color:var(--text);border:1px solid var(--border);
   border-radius:10px;padding:10px;font-size:14px}
 .admin-sat-list{margin-top:6px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
@@ -194,4 +194,24 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
 /* 管理后台封面预览 */
 .cover-prev{width:60px;height:82px;border-radius:8px;object-fit:cover;margin-top:6px;
   box-shadow:0 2px 8px rgba(0,0,0,.4);background:#222}
+
+/* ===== 管理弹窗：缩放抓手 + 工具条 ===== */
+.head-actions{display:flex;align-items:center;gap:8px}
+.drag-hint{color:var(--muted);white-space:nowrap}
+.resize-grip{position:absolute;right:0;bottom:0;width:22px;height:22px;cursor:nwse-resize;z-index:6;
+  background:linear-gradient(135deg,transparent 46%,rgba(124,196,255,.55) 46%);
+  border-bottom-right-radius:18px;touch-action:none}
+.resize-grip:hover{background:linear-gradient(135deg,transparent 40%,rgba(124,196,255,.95) 40%)}
+.content-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:2px}
+.field.area-sm{min-height:76px;max-height:180px;resize:vertical;line-height:1.6}
+
+/* 书籍详情：精简介绍 + 链接 */
+.book-desc{margin-top:8px;color:#cdd6f5;font-size:13.5px;line-height:1.65;
+  background:rgba(255,255,255,.05);border-left:3px solid var(--accent);
+  border-radius:0 8px 8px 0;padding:8px 12px}
+.book-link-wrap{margin-top:8px}
+.book-link{display:inline-block;font-size:13px;color:#bfe0ff;text-decoration:none;
+  background:rgba(124,196,255,.14);border:1px solid rgba(124,196,255,.35);
+  border-radius:9px;padding:6px 12px;transition:.15s}
+.book-link:hover{background:rgba(124,196,255,.26)}
 

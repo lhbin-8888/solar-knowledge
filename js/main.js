@@ -499,6 +499,13 @@ function openBook(catId, satId) {
   else { cover.style.backgroundImage = `url("${coverFor(cat, sat)}")`; }
   const tagsBox = document.getElementById('book-tags');
   tagsBox.innerHTML = (sat.tags || []).map((t) => `<span class="tag">${esc(t)}</span>`).join('');
+  const descEl = document.getElementById('book-desc');
+  if (sat.desc) { descEl.textContent = sat.desc; descEl.classList.remove('hidden'); }
+  else { descEl.textContent = ''; descEl.classList.add('hidden'); }
+  const linkWrap = document.getElementById('book-link-wrap');
+  const linkEl = document.getElementById('book-link');
+  if (sat.link) { linkEl.href = sat.link; linkWrap.classList.remove('hidden'); }
+  else { linkEl.removeAttribute('href'); linkWrap.classList.add('hidden'); }
   const body = document.getElementById('book-body');
   body.innerHTML = window.marked ? window.marked.parse(sat.content || '') : (sat.content || '');
   document.getElementById('book-modal').classList.remove('hidden');
@@ -735,6 +742,7 @@ function openAdmin() {
   resetForm();
   refreshAdminList();
   document.getElementById('admin-modal').classList.remove('hidden');
+  layoutAdminCard(true);   // 打开时按记忆尺寸居中摆放
 }
 
 function refreshAdminList() {
@@ -762,9 +770,12 @@ function resetForm() {
   document.getElementById('f-title').value = '';
   document.getElementById('f-author').value = '';
   document.getElementById('f-summary').value = '';
+  document.getElementById('f-link').value = '';
+  document.getElementById('f-desc').value = '';
   document.getElementById('f-tags').value = '';
   document.getElementById('f-cover').value = '';
   document.getElementById('f-content').value = '';
+  document.getElementById('f-file').value = '';
   document.getElementById('admin-form-title').textContent = '➕ 新增卫星（书籍 / 知识点）';
   document.getElementById('f-cancel').classList.add('hidden');
 }
@@ -774,6 +785,8 @@ function startEdit(sat) {
   document.getElementById('f-title').value = sat.title;
   document.getElementById('f-author').value = sat.author || '';
   document.getElementById('f-summary').value = sat.summary || '';
+  document.getElementById('f-link').value = sat.link || '';
+  document.getElementById('f-desc').value = sat.desc || '';
   document.getElementById('f-tags').value = (sat.tags || []).join(', ');
   document.getElementById('f-cover').value = sat.cover || '';
   document.getElementById('f-content').value = sat.content || '';
@@ -789,7 +802,10 @@ async function saveSat() {
     .split(/[,，]/).map((t) => t.trim()).filter(Boolean);
   const cover = document.getElementById('f-cover').value.trim();
   const payload = { title, author: document.getElementById('f-author').value.trim(),
-    summary: document.getElementById('f-summary').value.trim(), tags, cover, content };
+    summary: document.getElementById('f-summary').value.trim(),
+    desc: document.getElementById('f-desc').value.trim(),
+    link: document.getElementById('f-link').value.trim(),
+    tags, cover, content };
   try {
     let url, method;
     if (editingSatId) { url = '/api/satellite/' + editingSatId; method = 'PUT'; }
@@ -894,6 +910,116 @@ async function deleteCategory() {
   }
 }
 
+/* ===================== 管理弹窗：缩放 / 最大化 / 本地上传 ===================== */
+const ADMIN_MIN_W = 620, ADMIN_MIN_H = 420;
+function adminCardEl() { return document.querySelector('#admin-modal .admin-card'); }
+
+/* 摆放卡片：reset=true 用默认尺寸；否则沿用记忆尺寸。始终居中且不超出视口 */
+function layoutAdminCard(reset) {
+  const card = adminCardEl();
+  if (!card) return;
+  const pad = 16;
+  const maxW = window.innerWidth - pad * 2;
+  const maxH = window.innerHeight - pad * 2;
+  let w = (reset || !card.dataset.w) ? Math.min(860, maxW) : Number(card.dataset.w);
+  let h = (reset || !card.dataset.h) ? Math.min(660, maxH) : Number(card.dataset.h);
+  w = Math.max(Math.min(ADMIN_MIN_W, maxW), Math.min(w, maxW));
+  h = Math.max(Math.min(ADMIN_MIN_H, maxH), Math.min(h, maxH));
+  card.classList.remove('maxed');
+  card.style.width = w + 'px';
+  card.style.height = h + 'px';
+  card.style.left = Math.max(pad, (window.innerWidth - w) / 2) + 'px';
+  card.style.top = Math.max(pad, (window.innerHeight - h) / 2) + 'px';
+  card.dataset.w = Math.round(w);
+  card.dataset.h = Math.round(h);
+}
+
+function bindAdminResize() {
+  const card = adminCardEl();
+  const grip = document.getElementById('admin-grip');
+  const fitBtn = document.getElementById('admin-fit');
+  if (!card || !grip) return;
+  let dragging = false, startX = 0, startY = 0, startW = 0, startH = 0, startL = 0, startT = 0;
+
+  grip.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    const r = card.getBoundingClientRect();
+    startW = r.width; startH = r.height; startL = r.left; startT = r.top;
+    card.classList.remove('maxed');
+    try { grip.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault();
+  });
+  grip.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const pad = 8;
+    const w = Math.min(Math.max(ADMIN_MIN_W, startW + (e.clientX - startX)), window.innerWidth - startL - pad);
+    const h = Math.min(Math.max(ADMIN_MIN_H, startH + (e.clientY - startY)), window.innerHeight - startT - pad);
+    card.style.width = w + 'px';
+    card.style.height = h + 'px';
+    card.dataset.w = Math.round(w);
+    card.dataset.h = Math.round(h);
+  });
+  const stop = () => { dragging = false; };
+  grip.addEventListener('pointerup', stop);
+  grip.addEventListener('pointercancel', stop);
+
+  fitBtn.addEventListener('click', () => {
+    if (card.classList.toggle('maxed')) {
+      const pad = 16;
+      card.style.left = pad + 'px';
+      card.style.top = pad + 'px';
+      card.style.width = (window.innerWidth - pad * 2) + 'px';
+      card.style.height = (window.innerHeight - pad * 2) + 'px';
+    } else {
+      layoutAdminCard(true);
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (document.getElementById('admin-modal').classList.contains('hidden')) return;
+    if (card.classList.contains('maxed')) {
+      const pad = 16;
+      card.style.left = pad + 'px';
+      card.style.top = pad + 'px';
+      card.style.width = (window.innerWidth - pad * 2) + 'px';
+      card.style.height = (window.innerHeight - pad * 2) + 'px';
+      return;
+    }
+    const r = card.getBoundingClientRect();
+    const w = Math.max(Math.min(ADMIN_MIN_W, window.innerWidth - 16), Math.min(r.width, window.innerWidth - 16));
+    const h = Math.max(Math.min(ADMIN_MIN_H, window.innerHeight - 16), Math.min(r.height, window.innerHeight - 16));
+    card.style.width = w + 'px';
+    card.style.height = h + 'px';
+    card.style.left = Math.max(8, Math.min(parseFloat(card.style.left) || 0, window.innerWidth - w - 8)) + 'px';
+    card.style.top = Math.max(8, Math.min(parseFloat(card.style.top) || 0, window.innerHeight - h - 8)) + 'px';
+    card.dataset.w = Math.round(w);
+    card.dataset.h = Math.round(h);
+  });
+}
+
+/* 上传本地文本文件，读入「内容」文本域（.md / .txt 等 UTF-8 文本） */
+function bindFileUpload() {
+  const btn = document.getElementById('btn-upload');
+  const input = document.getElementById('f-file');
+  const area = document.getElementById('f-content');
+  if (!btn || !input || !area) return;
+  btn.addEventListener('click', () => input.click());
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (area.value.trim() && !confirm(`内容框已有文字，上传「${file.name}」将覆盖其中内容，继续？`)) {
+      input.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => { area.value = String(reader.result || ''); toast('已载入文件：' + file.name); };
+    reader.onerror = () => toast('读取文件失败，请检查文件编码（建议 UTF-8）');
+    reader.readAsText(file, 'utf-8');
+    input.value = '';
+  });
+}
+
 /* ===================== 工具 ===================== */
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
@@ -914,4 +1040,6 @@ function toast(msg) {
   renderTagChips();
   document.getElementById('f-save').addEventListener('click', saveSat);
   document.getElementById('f-cancel').addEventListener('click', resetForm);
+  bindAdminResize();
+  bindFileUpload();
 })();

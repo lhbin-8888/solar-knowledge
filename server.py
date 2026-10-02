@@ -160,6 +160,8 @@ def load_data():
             s["content"] = read_book(c["id"], s["id"])
             s.setdefault("tags", [])
             s.setdefault("cover", "")
+            s.setdefault("desc", "")
+            s.setdefault("link", "")
     return data
 
 
@@ -261,6 +263,8 @@ class Handler(BaseHTTPRequestHandler):
             "title": str(payload.get("title", "")).strip(),
             "author": str(payload.get("author", "")).strip(),
             "summary": str(payload.get("summary", "")).strip(),
+            "desc": str(payload.get("desc", "")).strip(),
+            "link": str(payload.get("link", "")).strip(),
             "tags": payload.get("tags", []) if isinstance(payload.get("tags"), list) else [],
             "cover": str(payload.get("cover", "")).strip(),
         }
@@ -312,9 +316,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, {"error": "satellite not found"})
             return
         payload = self._read_json()
-        for k in ("title", "author", "summary", "tags", "cover"):
+        for k in ("title", "author", "summary", "desc", "link", "tags", "cover"):
             if k in payload:
-                sat[k] = payload[k] if k != "cover" else str(payload[k]).strip()
+                sat[k] = str(payload[k]).strip() if k in ("cover", "link", "desc") else payload[k]
         if "content" in payload:
             write_book(cat["id"], sat_id, str(payload["content"]))
             sat["content"] = str(payload["content"])

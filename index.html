@@ -83,6 +83,10 @@
           <h2 id="book-title">书名</h2>
           <div id="book-author" class="muted"></div>
           <div id="book-tags" class="book-tags"></div>
+          <div id="book-desc" class="book-desc hidden"></div>
+          <div id="book-link-wrap" class="book-link-wrap hidden">
+            <a id="book-link" class="book-link" href="#" target="_blank" rel="noopener">🔗 打开相关链接</a>
+          </div>
         </div>
         <button class="icon-btn" data-close="book">✕</button>
       </div>
@@ -93,9 +97,13 @@
   <!-- 管理后台弹窗 -->
   <div id="admin-modal" class="modal hidden">
     <div class="modal-card admin-card">
-      <div class="modal-head">
+      <div class="modal-head" id="admin-head">
         <h2>⚙ 知识库管理</h2>
-        <button class="icon-btn" data-close="admin">✕</button>
+        <div class="head-actions">
+          <span class="muted small drag-hint">拖拽右下角缩放</span>
+          <button id="admin-fit" class="icon-btn" title="最大化 / 还原">⤢</button>
+          <button class="icon-btn" data-close="admin">✕</button>
+        </div>
       </div>
       <div class="admin-body">
         <div class="admin-left">
@@ -119,9 +127,16 @@
           <h3 id="admin-form-title">➕ 新增卫星（书籍 / 知识点）</h3>
           <input id="f-title" class="field" placeholder="书名 / 知识点标题" />
           <input id="f-author" class="field" placeholder="作者（可选）" />
-          <input id="f-summary" class="field" placeholder="一句话简介（可选）" />
+          <input id="f-summary" class="field" placeholder="一句话简介（可选，卡片上显示）" />
+          <input id="f-link" class="field" placeholder="书籍链接（可选，如 https://… 豆瓣 / 购买 / 在线阅读地址）" />
+          <textarea id="f-desc" class="field area-sm" placeholder="书籍精简介绍（可选，2~4 句概述这本书讲什么，详情页显示）"></textarea>
           <input id="f-tags" class="field" placeholder="标签，用逗号分隔，如：经典,心理学" />
           <input id="f-cover" class="field" placeholder="封面图 URL（可留空，自动生成渐变封面；也可填 /books/covers/xxx.png）" />
+          <div class="content-tools">
+            <button id="btn-upload" class="btn small ghost" type="button">📄 上传本地文件</button>
+            <input id="f-file" type="file" accept=".md,.markdown,.txt,.text,.json,.html,.htm" hidden />
+            <span class="muted small">支持 .md / .txt 等文本，读取后填入下方内容框</span>
+          </div>
           <textarea id="f-content" class="field area" placeholder="内容（支持 Markdown：# 标题、**加粗**、- 列表、> 引用）"></textarea>
           <div class="admin-actions">
             <button id="f-save" class="btn primary">保存</button>
@@ -130,6 +145,7 @@
           <p class="muted small">所有改动实时写入 <code>D:\线上知识库平台\data\knowledge.json</code> 与各分类 <code>books/</code> 下的 .md 文件</p>
         </div>
       </div>
+      <div class="resize-grip" id="admin-grip" title="拖拽调整大小"></div>
     </div>
   </div>
 
