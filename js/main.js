@@ -100,7 +100,7 @@ function makeDotTexture() {
 }
 
 function buildStarfield() {
-  const N = 4200;
+  const N = 9000;
   const pos = new Float32Array(N * 3);
   const col = new Float32Array(N * 3);
   const phase = new Float32Array(N);
@@ -113,7 +113,7 @@ function buildStarfield() {
     pos[i*3+1] = r * Math.sin(ph) * Math.sin(th);
     pos[i*3+2] = r * Math.cos(ph);
     // 亮度 + 轻微冷暖色偏，整体更亮
-    const b = 0.62 + Math.random() * 0.38;
+    const b = 0.80 + Math.random() * 0.20;
     const tint = Math.random();
     let cr, cg, cb;
     if (tint < 0.18)      { cr = b;        cg = b * 0.92; cb = b * 0.78; } // 暖白
@@ -131,7 +131,7 @@ function buildStarfield() {
   // 逐点慢闪：用 ShaderMaterial 按 uTime + 每点随机相位/速度算 alpha，片元里画圆点
   starfieldMat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { uTime: { value: 0 }, uSize: { value: 2.6 } },
+    uniforms: { uTime: { value: 0 }, uSize: { value: 4.6 } },
     vertexShader: `
       attribute vec3 color;
       attribute float aPhase;
@@ -142,9 +142,9 @@ function buildStarfield() {
       varying float vAlpha;
       void main() {
         vColor = color;
-        vAlpha = 0.5 + 0.5 * sin(uTime * aSpeed + aPhase);   // 0~1 呼吸
+        vAlpha = 0.72 + 0.28 * sin(uTime * aSpeed + aPhase);   // 0.44~1.0 呼吸，不再闪没
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = clamp(uSize * (350.0 / -mv.z), 1.0, 6.0);
+        gl_PointSize = clamp(uSize * (900.0 / -mv.z), 2.2, 18.0);
         gl_Position = projectionMatrix * mv;
       }
     `,
