@@ -121,7 +121,7 @@ function buildStarfield() {
     else                  { cr = b;        cg = b;        cb = b;        } // 纯白
     col[i*3] = cr; col[i*3+1] = cg; col[i*3+2] = cb;
     phase[i] = Math.random() * Math.PI * 2;
-    speed[i] = 0.25 + Math.random() * 0.9;   // 缓慢闪烁速度（错落）
+    speed[i] = 0.6 + Math.random() * 1.8;   // 闪烁速度（错落，整体调快）
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -251,7 +251,7 @@ function buildDipper() {
     positions.push(v);
     dipperStars.push({
       mat, base: 0.9, amp: 0.34,
-      speed: 0.5 + Math.random() * 0.6,
+      speed: 0.9 + Math.random() * 1.2,
       phase: Math.random() * Math.PI * 2
     });
   });
