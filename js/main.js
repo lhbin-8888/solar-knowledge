@@ -304,7 +304,7 @@ function buildSolarSystem() {
     const ecc = 0.30 + ((idx * 0.05) % 0.28);         // 0.30~0.58，椭圆明显、往两端延展
     const b = a * Math.sqrt(1 - ecc * ecc);
     const rot = 0;                                     // 所有椭圆长轴统一沿 x 轴，同一平面整齐
-    const startAngle = idx * 1.7;                      // 起始相位错开，避免初始挤在一起
+    const startAngle = idx * 2.399963;                 // 黄金角分配初始相位，行星均匀分散、避免排成一条线
     const pivot = new THREE.Group();
     scene.add(pivot);
 
