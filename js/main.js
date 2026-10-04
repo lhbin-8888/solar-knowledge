@@ -300,11 +300,11 @@ function buildSolarSystem() {
   KNOWLEDGE.categories.forEach((cat, idx) => {
     const color = new THREE.Color(cat.color);
     // 椭圆轨道：半长轴=原轨道半径，离心率与长轴朝向按序错落，半短轴=b=a*sqrt(1-e^2)
-    const a = cat.orbitRadius * PLANET_SCALE;
-    const ecc = 0.18 + ((idx * 0.077) % 0.34);   // 0.18~0.52，椭圆明显且各行星不同
+    const a = cat.orbitRadius * PLANET_SCALE * 1.25;  // 往长轴/径向拉伸，缓解轨道拥挤
+    const ecc = 0.30 + ((idx * 0.05) % 0.28);         // 0.30~0.58，椭圆明显、往两端延展
     const b = a * Math.sqrt(1 - ecc * ecc);
-    const rot = idx * 0.9;                         // 各行星椭圆长轴朝向不同
-    const startAngle = idx * 1.7;                  // 起始相位错开，避免初始挤在一起
+    const rot = 0;                                     // 所有椭圆长轴统一沿 x 轴，同一平面整齐
+    const startAngle = idx * 1.7;                      // 起始相位错开，避免初始挤在一起
     const pivot = new THREE.Group();
     scene.add(pivot);
 
