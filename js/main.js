@@ -297,8 +297,14 @@ function buildSolarSystem() {
   const labelsLayer = document.getElementById('labels');
   labelsLayer.innerHTML = '';
 
-  KNOWLEDGE.categories.forEach((cat) => {
+  KNOWLEDGE.categories.forEach((cat, idx) => {
     const color = new THREE.Color(cat.color);
+    // 椭圆轨道：半长轴=原轨道半径，离心率与长轴朝向按序错落，半短轴=b=a*sqrt(1-e^2)
+    const a = cat.orbitRadius * PLANET_SCALE;
+    const ecc = 0.18 + ((idx * 0.077) % 0.34);   // 0.18~0.52，椭圆明显且各行星不同
+    const b = a * Math.sqrt(1 - ecc * ecc);
+    const rot = idx * 0.9;                         // 各行星椭圆长轴朝向不同
+    const startAngle = idx * 1.7;                  // 起始相位错开，避免初始挤在一起
     const pivot = new THREE.Group();
     scene.add(pivot);
 
@@ -308,11 +314,11 @@ function buildSolarSystem() {
       emissive: color.clone().multiplyScalar(0.18)
     });
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.x = cat.orbitRadius * PLANET_SCALE;
+    mesh.position.copy(ellipsePoint(a, b, rot, startAngle));
     mesh.userData = { type: 'planet', catId: cat.id };
     pivot.add(mesh);
 
-    scene.add(makeOrbitLine(cat.orbitRadius * PLANET_SCALE, color, orbitLines));
+    scene.add(makeOrbitLine(a, b, rot, color, orbitLines));
 
     const labelEl = document.createElement('div');
     labelEl.className = 'plabel';
@@ -320,7 +326,7 @@ function buildSolarSystem() {
     labelEl.style.color = '#' + color.getHexString();
     labelsLayer.appendChild(labelEl);
 
-    planets.push({ cat, pivot, mesh, orbitRadius: cat.orbitRadius, speed: cat.speed, labelEl });
+    planets.push({ cat, pivot, mesh, orbitRadius: cat.orbitRadius, rx: a, rz: b, rot, angle: startAngle, speed: cat.speed, labelEl });
 
     const group = new THREE.Group();
     group.visible = false;
@@ -331,12 +337,16 @@ function buildSolarSystem() {
   rebuildAllSatellites();
 }
 
-function makeOrbitLine(radius, color, collect) {
+function ellipsePoint(a, b, rot, t) {
+  const x = Math.cos(t) * a, z = Math.sin(t) * b;
+  const cr = Math.cos(rot), sr = Math.sin(rot);
+  return new THREE.Vector3(x * cr + z * sr, 0, -x * sr + z * cr);
+}
+function makeOrbitLine(a, b, rot, color, collect) {
   const pts = [];
   const seg = 160;
   for (let i = 0; i <= seg; i++) {
-    const a = (i / seg) * Math.PI * 2;
-    pts.push(new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius));
+    pts.push(ellipsePoint(a, b, rot, (i / seg) * Math.PI * 2));
   }
   const g = new THREE.BufferGeometry().setFromPoints(pts);
   const m = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.22 });
@@ -398,7 +408,10 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.05);
 
   if (!paused) {
-    planets.forEach((p) => { p.pivot.rotation.y += p.speed * dt * 0.5; });
+    planets.forEach((p) => {
+      p.angle += p.speed * dt * 0.5;
+      p.mesh.position.copy(ellipsePoint(p.rx, p.rz, p.rot, p.angle));
+    });
   }
 
   // 北斗七星缓慢闪烁
