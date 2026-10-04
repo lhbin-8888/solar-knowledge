@@ -300,7 +300,7 @@ function buildSolarSystem() {
   KNOWLEDGE.categories.forEach((cat, idx) => {
     const color = new THREE.Color(cat.color);
     // 椭圆轨道：半长轴=原轨道半径，离心率与长轴朝向按序错落，半短轴=b=a*sqrt(1-e^2)
-    const a = cat.orbitRadius * PLANET_SCALE * 1.25;  // 往长轴/径向拉伸，缓解轨道拥挤
+    const a = cat.orbitRadius * PLANET_SCALE * 1.5625;  // 再拉长1/4：1.25*1.25，向两端更舒展
     const ecc = 0.30 + ((idx * 0.05) % 0.28);         // 0.30~0.58，椭圆明显、往两端延展
     const b = a * Math.sqrt(1 - ecc * ecc);
     const rot = 0;                                     // 所有椭圆长轴统一沿 x 轴，同一平面整齐
