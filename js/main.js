@@ -308,7 +308,7 @@ function buildSolarSystem() {
     const pivot = new THREE.Group();
     scene.add(pivot);
 
-    const geo = new THREE.SphereGeometry(cat.size * PLANET_SCALE, 40, 40);
+    const geo = new THREE.SphereGeometry(cat.size * PLANET_SCALE * 2, 40, 40);  // 行星圆点放大一倍
     const mat = new THREE.MeshStandardMaterial({
       color, roughness: 0.85, metalness: 0.1,
       emissive: color.clone().multiplyScalar(0.18)
